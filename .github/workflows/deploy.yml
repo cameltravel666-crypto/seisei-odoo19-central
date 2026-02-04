@@ -160,6 +160,14 @@ jobs:
             infra/scripts/deploy.sh \
             ubuntu@13.159.193.191:/tmp/deploy_odoo19.sh
 
+      - name: Copy docker-compose.yml to server
+        run: |
+          scp -i ~/.ssh/id_rsa \
+            infra/stacks/docker-compose.yml \
+            ubuntu@13.159.193.191:/tmp/docker-compose.yml
+          ssh -i ~/.ssh/id_rsa ubuntu@13.159.193.191 \
+            "sudo cp /tmp/docker-compose.yml /srv/stacks/odoo19-central/docker-compose.yml"
+
       - name: Deploy on server
         run: |
           ssh -i ~/.ssh/id_rsa ubuntu@13.159.193.191 << 'ENDSSH'
