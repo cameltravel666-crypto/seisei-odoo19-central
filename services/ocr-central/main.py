@@ -890,6 +890,21 @@ async def call_gemini_api(
             logger.info(f"[DEBUG] Extracted keys: {list(extracted.keys())}")
             logger.info(f"[DEBUG] Extracted data: {extracted}")
 
+            # Post-process: Calculate r8_gross/r10_gross from line_items if missing
+            if extracted.get('r8_gross') is None or extracted.get('r10_gross') is None:
+                line_items = extracted.get('line_items', [])
+                if line_items:
+                    r8_sum = sum(item.get('gross_amount', 0) for item in line_items if item.get('tax_rate') == 8)
+                    r10_sum = sum(item.get('gross_amount', 0) for item in line_items if item.get('tax_rate') == 10)
+
+                    if extracted.get('r8_gross') is None and r8_sum > 0:
+                        extracted['r8_gross'] = r8_sum
+                        logger.info(f"[POST-PROCESS] Calculated r8_gross={r8_sum} from {len([i for i in line_items if i.get('tax_rate')==8])} items")
+
+                    if extracted.get('r10_gross') is None and r10_sum > 0:
+                        extracted['r10_gross'] = r10_sum
+                        logger.info(f"[POST-PROCESS] Calculated r10_gross={r10_sum} from {len([i for i in line_items if i.get('tax_rate')==10])} items")
+
             return {
                 'success': True,
                 'extracted': extracted,
