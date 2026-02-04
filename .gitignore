@@ -1,0 +1,59 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+*.egg-info/
+dist/
+build/
+
+# Odoo
+*.pot
+*.pyc
+.vscode/
+.idea/
+filestore/
+sessions/
+addons/web/
+addons/web_kanban/
+*.log
+
+# Environment
+.env
+.env.local
+.env.*.local
+*.pem
+*.key
+
+# OS
+.DS_Store
+Thumbs.db
+*.swp
+*.swo
+*~
+
+# Docker
+.dockerignore
+
+# Backups
+*.sql
+*.sql.gz
+*.dump
+*.backup
+
+# IDE
+.vscode/
+.idea/
+*.sublime-*
+
+# Node
+node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# Temporary
+tmp/
+temp/
+*.tmp

@@ -1,0 +1,160 @@
+version: '3.8'
+
+# =============================================================================
+# Odoo 19 Central Service - Docker Compose Stack
+# =============================================================================
+# Server: 13.159.193.191
+# Purpose: Central vendor operations management, OCR billing, multi-tenant billing
+# =============================================================================
+
+services:
+  odoo19:
+    image: ${ODOO19_IMAGE}:${ODOO19_IMAGE_DIGEST}
+    container_name: odoo19-central
+    restart: unless-stopped
+    depends_on:
+      postgres:
+        condition: service_healthy
+    ports:
+      - "8069:8069"  # HTTP
+      - "8072:8072"  # Longpolling
+    env_file:
+      - .env
+    environment:
+      # Service identification
+      - STACK_NAME=odoo19-central
+      - ENVIRONMENT=production
+
+      # Odoo configuration
+      # Note: HOST and PORT are used by entrypoint for database connection
+      # Odoo HTTP binding is configured via command args or defaults to 0.0.0.0:8069
+      - HOST=${DB_HOST:-postgres}
+      - PORT=${DB_PORT:-5432}
+      - LONGPOLLING_PORT=8072
+      - WORKERS=4
+      - MAX_CRON_THREADS=2
+      - LIMIT_TIME_CPU=600
+      - LIMIT_TIME_REAL=1200
+      - LIMIT_MEMORY_SOFT=2147483648   # 2GB
+      - LIMIT_MEMORY_HARD=2684354560   # 2.5GB
+
+      # Database configuration (from .env)
+      # Note: Odoo entrypoint expects HOST, PORT, USER, PASSWORD (not DB_*)
+      - USER=${DB_USER:-odoo}
+      - PASSWORD=${DB_PASSWORD}
+      # Also set DB_* for compatibility with some Odoo modules
+      - DB_HOST=${DB_HOST:-postgres}
+      - DB_PORT=${DB_PORT:-5432}
+      - DB_USER=${DB_USER:-odoo}
+      - DB_PASSWORD=${DB_PASSWORD}
+      - DATABASE=${DATABASE:-odoo19}
+      - DB_SSLMODE=prefer
+      - DB_MAXCONN=64
+      - DB_TEMPLATE=template0
+
+      # Session and data dir
+      - DATA_DIR=/var/lib/odoo
+      - SESSION_TIMEOUT=86400
+
+      # Single database mode (no multi-tenancy)
+      - DB_NAME=${DATABASE:-odoo19}
+      - DBFILTER=^odoo19$
+      - LIST_DB=false
+
+      # Addons path (custom addons in image)
+      - ADDONS_PATH=/mnt/extra-addons,/usr/lib/python3/dist-packages/odoo/addons
+
+      # Logging
+      - LOG_LEVEL=${LOG_LEVEL:-info}
+      - LOG_HANDLER=:INFO
+
+      # API Keys and External Services
+      - OCR_WEBHOOK_KEY=${OCR_WEBHOOK_KEY}
+      - OCR_SERVICE_URL=${OCR_SERVICE_URL:-http://13.159.193.191:8180/api/v1}
+
+      # Admin credentials (initial setup only)
+      - ADMIN_PASSWORD=${ADMIN_PASSWORD}
+
+    volumes:
+      - odoo-data:/var/lib/odoo
+      - odoo-sessions:/tmp
+
+    networks:
+      - odoo19-network
+
+    deploy:
+      resources:
+        limits:
+          cpus: '2.0'
+          memory: 4G
+        reservations:
+          cpus: '1.0'
+          memory: 2G
+
+    healthcheck:
+      test: ["CMD-SHELL", "/usr/local/bin/healthcheck.sh"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 90s
+
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"
+
+    labels:
+      - "com.seisei.stack=odoo19-central"
+      - "com.seisei.environment=production"
+      - "com.seisei.service=odoo19"
+
+  postgres:
+    image: postgres:16-alpine
+    container_name: odoo19-postgres
+    restart: unless-stopped
+    environment:
+      - POSTGRES_DB=${DATABASE:-odoo19}
+      - POSTGRES_USER=${DB_USER:-odoo}
+      - POSTGRES_PASSWORD=${DB_PASSWORD}
+      - POSTGRES_INITDB_ARGS=--encoding=UTF-8 --lc-collate=C --lc-ctype=C
+    volumes:
+      - postgres-data:/var/lib/postgresql/data
+    networks:
+      - odoo19-network
+    deploy:
+      resources:
+        limits:
+          cpus: '1.0'
+          memory: 2G
+        reservations:
+          cpus: '0.5'
+          memory: 1G
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${DB_USER:-odoo} -d ${DATABASE:-odoo19}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"
+    labels:
+      - "com.seisei.stack=odoo19-central"
+      - "com.seisei.environment=production"
+      - "com.seisei.service=postgres"
+
+volumes:
+  odoo-data:
+    driver: local
+  odoo-sessions:
+    driver: local
+  postgres-data:
+    driver: local
+
+networks:
+  odoo19-network:
+    driver: bridge
+    name: odoo19-central-network
