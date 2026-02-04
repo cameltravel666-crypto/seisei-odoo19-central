@@ -6,6 +6,7 @@ on:
     paths:
       - 'addons/**'
       - 'infra/**'
+      - 'services/ocr-central/**'
       - '.github/workflows/deploy.yml'
   workflow_dispatch:
     inputs:
@@ -188,3 +189,194 @@ jobs:
           echo "**Deployed by**: ${{ github.actor }}" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
           echo "**Service URL**: http://13.159.193.191:8069" >> $GITHUB_STEP_SUMMARY
+
+  build-and-push-ocr:
+    name: Build and Push OCR Service
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write
+    outputs:
+      image-digest: ${{ steps.push.outputs.digest }}
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Log in to Container Registry
+        uses: docker/login-action@v3
+        with:
+          registry: ${{ env.REGISTRY }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Extract metadata for OCR
+        id: meta
+        uses: docker/metadata-action@v5
+        with:
+          images: ${{ env.REGISTRY }}/${{ github.repository_owner }}/ocr-central
+          tags: |
+            type=raw,value=latest,enable={{is_default_branch}}
+            type=sha,prefix=sha-,format=short
+            type=ref,event=branch
+
+      - name: Build and push OCR service
+        id: push
+        uses: docker/build-push-action@v5
+        with:
+          context: ./services/ocr-central
+          file: ./services/ocr-central/Dockerfile
+          push: true
+          tags: ${{ steps.meta.outputs.tags }}
+          labels: ${{ steps.meta.outputs.labels }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+          build-args: |
+            BUILD_DATE=${{ github.event.head_commit.timestamp }}
+            GIT_SHA=${{ github.sha }}
+
+      - name: Display OCR image info
+        run: |
+          echo "### OCR Service Image Built! 🎉" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "**Image**: \`${{ env.REGISTRY }}/${{ github.repository_owner }}/ocr-central\`" >> $GITHUB_STEP_SUMMARY
+          echo "**Digest**: \`${{ steps.push.outputs.digest }}\`" >> $GITHUB_STEP_SUMMARY
+
+  deploy-ocr-service:
+    name: Deploy OCR Service
+    runs-on: ubuntu-latest
+    needs: build-and-push-ocr
+    if: github.ref == 'refs/heads/main' || github.event_name == 'workflow_dispatch'
+    environment:
+      name: ocr-central-production
+      url: http://13.159.193.191:8180
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup SSH
+        run: |
+          mkdir -p ~/.ssh
+          echo "${{ secrets.ODOO19_SSH_KEY }}" > ~/.ssh/id_rsa
+          chmod 600 ~/.ssh/id_rsa
+          ssh-keyscan -H 13.159.193.191 >> ~/.ssh/known_hosts
+
+      - name: Prepare docker-compose with digest
+        run: |
+          cd services/ocr-central
+          # Update docker-compose to use digest instead of build
+          cat > docker-compose.prod.yml << EOF
+          version: '3.8'
+
+          services:
+            ocr-service:
+              image: ${{ env.REGISTRY }}/${{ github.repository_owner }}/ocr-central@${{ needs.build-and-push-ocr.outputs.image-digest }}
+              container_name: ocr-service
+              restart: unless-stopped
+              ports:
+                - "8180:8080"
+              environment:
+                - GEMINI_API_KEY=\${GEMINI_API_KEY}
+                - OCR_DATABASE_URL=postgresql://ocr:\${OCR_DB_PASSWORD:-ocr}@ocr-db:5432/ocr_service
+                - OCR_SERVICE_KEY=\${OCR_SERVICE_KEY}
+                - OCR_FREE_QUOTA=\${OCR_FREE_QUOTA:-30}
+                - OCR_PRICE_PER_IMAGE=\${OCR_PRICE_PER_IMAGE:-20}
+              depends_on:
+                - ocr-db
+              networks:
+                - ocr-network
+
+            ocr-db:
+              image: postgres:15-alpine
+              container_name: ocr-db
+              restart: unless-stopped
+              environment:
+                - POSTGRES_USER=ocr
+                - POSTGRES_PASSWORD=\${OCR_DB_PASSWORD:-ocr}
+                - POSTGRES_DB=ocr_service
+              volumes:
+                - ocr-db-data:/var/lib/postgresql/data
+              networks:
+                - ocr-network
+
+          volumes:
+            ocr-db-data:
+
+          networks:
+            ocr-network:
+              driver: bridge
+          EOF
+
+      - name: Copy files to server
+        run: |
+          scp -i ~/.ssh/id_rsa \
+            services/ocr-central/docker-compose.prod.yml \
+            ubuntu@13.159.193.191:/tmp/
+
+      - name: Deploy OCR service on server
+        run: |
+          ssh -i ~/.ssh/id_rsa ubuntu@13.159.193.191 << 'ENDSSH'
+            # Create deployment directory
+            mkdir -p ~/ocr-central
+
+            # Move docker-compose file
+            mv /tmp/docker-compose.prod.yml ~/ocr-central/docker-compose.yml
+
+            # Check if .env exists
+            if [ ! -f ~/ocr-central/.env ]; then
+              echo "ERROR: .env file not found in ~/ocr-central/"
+              echo "Please create .env with required variables:"
+              echo "  - GEMINI_API_KEY"
+              echo "  - OCR_SERVICE_KEY"
+              echo "  - OCR_DB_PASSWORD"
+              exit 1
+            fi
+
+            cd ~/ocr-central
+
+            # Pull the new image
+            docker pull ${{ env.REGISTRY }}/${{ github.repository_owner }}/ocr-central@${{ needs.build-and-push-ocr.outputs.image-digest }}
+
+            # Stop old containers
+            docker compose down || true
+
+            # Start services with new image
+            docker compose up -d
+
+            # Wait for service to start
+            echo "Waiting for OCR service to start..."
+            sleep 10
+
+            # Health check
+            for i in {1..30}; do
+              if curl -f -s http://localhost:8180/health > /dev/null 2>&1; then
+                echo "✅ OCR service is healthy"
+                break
+              fi
+              echo "Waiting for OCR service... ($i/30)"
+              sleep 5
+            done
+
+            # Show status
+            echo ""
+            echo "Running containers:"
+            docker compose ps
+
+            echo ""
+            echo "Recent logs:"
+            docker compose logs --tail=20 ocr-service
+          ENDSSH
+
+      - name: OCR Deployment summary
+        run: |
+          echo "### OCR Service Deployed! ✅" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "**Service**: OCR Central" >> $GITHUB_STEP_SUMMARY
+          echo "**Server**: 13.159.193.191:8180" >> $GITHUB_STEP_SUMMARY
+          echo "**Image Digest**: \`${{ needs.build-and-push-ocr.outputs.image-digest }}\`" >> $GITHUB_STEP_SUMMARY
+          echo "**Deployed by**: ${{ github.actor }}" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "**Service URL**: http://13.159.193.191:8180" >> $GITHUB_STEP_SUMMARY
+          echo "**Health Check**: http://13.159.193.191:8180/health" >> $GITHUB_STEP_SUMMARY
