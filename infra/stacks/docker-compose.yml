@@ -9,7 +9,7 @@ version: '3.8'
 
 services:
   odoo19:
-    image: ghcr.io/cameltravel666-crypto/seisei-odoo19:latest
+    image: ${ODOO19_IMAGE}:${ODOO19_IMAGE_DIGEST}
     container_name: odoo19-central
     restart: unless-stopped
     depends_on:
