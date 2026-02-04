@@ -200,8 +200,8 @@ deploy_stack() {
     cd "$STACK_DIR"
 
     # Recreate containers with new image
-    docker-compose down
-    docker-compose up -d --force-recreate
+    docker compose down
+    docker compose up -d --force-recreate
 
     success "Deployment initiated"
 }
@@ -287,8 +287,8 @@ rollback() {
     cd "$STACK_DIR"
     sed -i "s|^ODOO19_IMAGE_DIGEST=.*|ODOO19_IMAGE_DIGEST=${last_good}|" .env
 
-    docker-compose down
-    docker-compose up -d --force-recreate
+    docker compose down
+    docker compose up -d --force-recreate
 
     sleep 15
 
@@ -342,7 +342,7 @@ main() {
                 # Show running containers
                 echo ""
                 info "Running containers:"
-                docker-compose -f "${STACK_DIR}/docker-compose.yml" ps
+                docker compose -f "${STACK_DIR}/docker-compose.yml" ps
 
                 exit 0
             else
