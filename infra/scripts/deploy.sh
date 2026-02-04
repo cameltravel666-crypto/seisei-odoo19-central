@@ -242,7 +242,7 @@ smoke_test() {
     info "Running smoke tests..."
 
     # Test 1: Database connection
-    if ! docker exec odoo19-central psql -h postgres -U odoo -d odoo19 -c "SELECT 1" > /dev/null 2>&1; then
+    if ! docker exec odoo19-postgres psql -U odoo -d odoo19 -c "SELECT 1" > /dev/null 2>&1; then
         error "Database connection test failed"
         return 1
     fi
