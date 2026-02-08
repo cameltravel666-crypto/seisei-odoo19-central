@@ -37,8 +37,9 @@ class IrActionsActWindow(models.Model):
                 # Filter view_mode field (comma-separated string of view types)
                 view_mode = action.get("view_mode")
                 if view_mode and isinstance(view_mode, str):
-                    # Split, strip whitespace, and filter out 'map'
-                    parts = [mode for mode in (m.strip() for m in view_mode.split(",")) if mode != "map"]
+                    # Split, strip whitespace, filter out 'map' and empty strings
+                    parts = [mode for mode in (m.strip() for m in view_mode.split(",")) 
+                             if mode and mode != "map"]
                     action["view_mode"] = ",".join(parts)
                 
                 # Filter views field
@@ -46,8 +47,9 @@ class IrActionsActWindow(models.Model):
                 views = action.get("views")
                 if views and isinstance(views, list):
                     # Filter out any views with 'map' type
-                    # Check len >= 2 to ensure tuple has both view_id and view_type
-                    filtered_views = [view for view in views if view and len(view) >= 2 and view[1] != "map"]
+                    # The structure is guaranteed by Odoo, but we check len for safety
+                    filtered_views = [view for view in views 
+                                    if view and len(view) >= 2 and view[1] != "map"]
                     action["views"] = filtered_views
         
         # Remove fields that were not originally requested to maintain API contract
