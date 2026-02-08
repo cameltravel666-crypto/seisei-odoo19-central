@@ -51,10 +51,12 @@ RUN mkdir -p /mnt/extra-addons && chown -R odoo:odoo /mnt/extra-addons
 # - qr_ordering (QR code ordering system)
 # - seisei_billing (multi-tenant billing)
 # - seisei_hr_menu (HR customization)
+# - l10n_jp_seisei (Japanese localization/chart of accounts)
 COPY --chown=odoo:odoo addons/vendor_ops_core/ /mnt/extra-addons/vendor_ops_core/
 COPY --chown=odoo:odoo addons/qr_ordering/ /mnt/extra-addons/qr_ordering/
 COPY --chown=odoo:odoo addons/seisei_billing/ /mnt/extra-addons/seisei_billing/
 COPY --chown=odoo:odoo addons/seisei_hr_menu/ /mnt/extra-addons/seisei_hr_menu/
+COPY --chown=odoo:odoo addons/l10n_jp_seisei/ /mnt/extra-addons/l10n_jp_seisei/
 
 # Set correct permissions
 # Directories: 755 (rwxr-xr-x)
