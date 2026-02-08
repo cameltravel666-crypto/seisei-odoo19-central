@@ -38,6 +38,7 @@ class IrActionsActWindow(models.Model):
                 view_mode = action.get("view_mode")
                 if view_mode and isinstance(view_mode, str):
                     # Split, strip whitespace, filter out 'map' and empty strings
+                    # Using two-step approach for clarity and to avoid redundant strip() calls
                     stripped_modes = [m.strip() for m in view_mode.split(",")]
                     parts = [mode for mode in stripped_modes if mode and mode != "map"]
                     action["view_mode"] = ",".join(parts)
