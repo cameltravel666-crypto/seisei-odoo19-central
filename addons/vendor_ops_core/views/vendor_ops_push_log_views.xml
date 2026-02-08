@@ -1,9 +1,9 @@
 <?xml version="1.0" encoding="utf-8"?>
 <odoo>
     <!-- Push Log List View -->
-    <record id="seisei_push_log_view_list" model="ir.ui.view">
-        <field name="name">seisei.push.log.list</field>
-        <field name="model">seisei.push.log</field>
+    <record id="vendor_ops_push_log_view_list" model="ir.ui.view">
+        <field name="name">vendor.ops.push.log.list</field>
+        <field name="model">vendor.ops.push.log</field>
         <field name="arch" type="xml">
             <list string="Push Logs" create="false" edit="false">
                 <field name="push_date"/>
@@ -16,9 +16,9 @@
     </record>
 
     <!-- Push Log Form View -->
-    <record id="seisei_push_log_view_form" model="ir.ui.view">
-        <field name="name">seisei.push.log.form</field>
-        <field name="model">seisei.push.log</field>
+    <record id="vendor_ops_push_log_view_form" model="ir.ui.view">
+        <field name="name">vendor.ops.push.log.form</field>
+        <field name="model">vendor.ops.push.log</field>
         <field name="arch" type="xml">
             <form string="Push Log" create="false" edit="false">
                 <sheet>
@@ -50,9 +50,9 @@
     </record>
 
     <!-- Push Log Search View -->
-    <record id="seisei_push_log_view_search" model="ir.ui.view">
-        <field name="name">seisei.push.log.search</field>
-        <field name="model">seisei.push.log</field>
+    <record id="vendor_ops_push_log_view_search" model="ir.ui.view">
+        <field name="name">vendor.ops.push.log.search</field>
+        <field name="model">vendor.ops.push.log</field>
         <field name="arch" type="xml">
             <search string="Search Push Logs">
                 <field name="tenant_id"/>
@@ -69,11 +69,11 @@
     </record>
 
     <!-- Push Log Action -->
-    <record id="seisei_push_log_action" model="ir.actions.act_window">
+    <record id="vendor_ops_push_log_action" model="ir.actions.act_window">
         <field name="name">Push Logs</field>
-        <field name="res_model">seisei.push.log</field>
+        <field name="res_model">vendor.ops.push.log</field>
         <field name="view_mode">list,form</field>
-        <field name="search_view_id" ref="seisei_push_log_view_search"/>
+        <field name="search_view_id" ref="vendor_ops_push_log_view_search"/>
         <field name="help" type="html">
             <p class="o_view_nocontent_smiling_face">
                 No push logs yet

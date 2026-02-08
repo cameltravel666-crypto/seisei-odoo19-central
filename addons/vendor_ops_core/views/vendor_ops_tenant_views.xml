@@ -37,7 +37,7 @@
                                 invisible="not id">
                             <field name="intake_batch_ids" widget="statinfo" string="Batches"/>
                         </button>
-                        <button name="%(seisei_push_log_action)d"
+                        <button name="%(vendor_ops_push_log_action)d"
                                 type="action"
                                 class="oe_stat_button"
                                 icon="fa-history"

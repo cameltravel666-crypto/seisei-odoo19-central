@@ -1,12 +1,12 @@
 # -*- coding: utf-8 -*-
-# seisei.push.log model - Logs for entitlement push operations
+# vendor.ops.push.log model - Logs for entitlement push operations
 
 from odoo import api, fields, models
 
 
-class SeiseiPushLog(models.Model):
-    _name = 'seisei.push.log'
-    _description = 'Seisei Entitlement Push Log'
+class VendorOpsPushLog(models.Model):
+    _name = 'vendor.ops.push.log'
+    _description = 'Vendor Ops Entitlement Push Log'
     _order = 'push_date desc'
 
     tenant_id = fields.Many2one(

@@ -127,7 +127,7 @@ class VendorOpsTenant(models.Model):
 
     # Push logs
     entitlement_push_log_ids = fields.One2many(
-        'seisei.push.log',
+        'vendor.ops.push.log',
         'tenant_id',
         string='Entitlement Push Logs',
     )
@@ -535,7 +535,7 @@ class VendorOpsTenant(models.Model):
             })
             _logger.error(f"Failed to push entitlements for tenant {self.code}: {error_msg}")
 
-        self.env['seisei.push.log'].create(log_vals)
+        self.env['vendor.ops.push.log'].create(log_vals)
 
     @api.model
     def cron_reconcile_entitlements(self):

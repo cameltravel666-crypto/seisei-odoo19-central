@@ -30,7 +30,7 @@
     ''',
     'author': 'Seisei',
     'website': 'https://seisei.tokyo',
-    'depends': ['base', 'mail', 'sale_subscription', 'product'],
+    'depends': ['base', 'mail', 'sale_subscription', 'product', 'seisei_billing'],
     'data': [
         'security/ir.model.access.csv',
         'data/intake_batch_sequence.xml',
@@ -39,12 +39,11 @@
         # Load intake batch views FIRST (defines action_vendor_ops_intake_batch)
         'views/vendor_ops_intake_batch_views.xml',
         # Load push log views BEFORE tenant views (tenant views reference push log action)
-        'views/seisei_push_log_views.xml',
+        'views/vendor_ops_push_log_views.xml',
         # Load tenant views SECOND (references action_vendor_ops_intake_batch and push log action)
         'views/vendor_ops_tenant_views.xml',
         'views/vendor_ops_start_intake_wizard_views.xml',
-        'views/seisei_feature_views.xml',
-        'views/seisei_product_feature_map_views.xml',
+        # Feature views removed - using seisei_billing definitions
         'views/menu_views.xml',
     ],
     'post_init_hook': '_post_init_align_sequences',

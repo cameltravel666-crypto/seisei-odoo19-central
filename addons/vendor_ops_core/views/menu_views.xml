@@ -43,21 +43,21 @@
     <menuitem id="menu_seisei_features"
               name="Features"
               parent="menu_vendor_ops_entitlement_root"
-              action="seisei_feature_action"
+              action="seisei_billing.seisei_feature_action"
               sequence="10"/>
 
     <!-- Product Feature Mappings menu -->
     <menuitem id="menu_seisei_product_feature_map"
               name="Product Mappings"
               parent="menu_vendor_ops_entitlement_root"
-              action="seisei_product_feature_map_action"
+              action="seisei_billing.seisei_product_feature_map_action"
               sequence="20"/>
 
     <!-- Push Logs menu -->
     <menuitem id="menu_seisei_push_logs"
               name="Push Logs"
               parent="menu_vendor_ops_entitlement_root"
-              action="seisei_push_log_action"
+              action="vendor_ops_push_log_action"
               sequence="30"/>
 
     <!-- OCR Configuration menu -->
