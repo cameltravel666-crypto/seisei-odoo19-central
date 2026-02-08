@@ -14,7 +14,7 @@ class IrActionsActWindow(models.Model):
             for action in records:
                 view_mode = action.get("view_mode")
                 if view_mode:
-                    parts = [mode for mode in view_mode.split(",") if mode != "map"]
+                    parts = [mode.strip() for mode in view_mode.split(",") if mode.strip() != "map"]
                     if len(parts) != len(view_mode.split(",")):
                         action["view_mode"] = ",".join(parts)
                 views = action.get("views")
