@@ -6,18 +6,13 @@ class IrActionsActWindow(models.Model):
     _inherit = "ir.actions.act_window"
 
     def read(self, fields=None):
-        # Track if we need to add fields for filtering
-        original_fields = fields
+        # Track which fields we add for filtering so we can remove them later
         fields_to_remove = []
         
         # Always ensure view_mode and views are included for proper filtering
         # We need these fields to filter out unsupported view types like 'map'
         if fields is not None:
-            # Convert fields to list if it's not already
-            if isinstance(fields, str):
-                fields_list = [fields]
-            else:
-                fields_list = list(fields)
+            fields_list = list(fields)
             
             # Add view_mode and views if not already present
             if 'view_mode' not in fields_list:
@@ -45,14 +40,16 @@ class IrActionsActWindow(models.Model):
                     parts = [mode.strip() for mode in view_mode.split(",") if mode.strip() != "map"]
                     action["view_mode"] = ",".join(parts)
                 
-                # Filter views field (list of tuples: [(view_id, view_type), ...])
-                # Each tuple contains view_id (int or False) and view_type (str)
+                # Filter views field
+                # Each view is a tuple: (view_id, view_type) where view_id is int or False
                 views = action.get("views")
                 if views and isinstance(views, list):
+                    # Filter out any views with 'map' type
+                    # The len check is defensive in case of malformed data
                     filtered_views = [view for view in views if view and len(view) >= 2 and view[1] != "map"]
                     action["views"] = filtered_views
         
-        # Remove fields that were not originally requested
+        # Remove fields that were not originally requested to maintain API contract
         if fields_to_remove:
             for action in records:
                 for field in fields_to_remove:
