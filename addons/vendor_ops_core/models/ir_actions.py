@@ -6,20 +6,57 @@ class IrActionsActWindow(models.Model):
     _inherit = "ir.actions.act_window"
 
     def read(self, fields=None):
-        records = super().read(fields=fields)
+        # Track which fields we add for filtering so we can remove them later
+        fields_to_remove = []
+        
+        # Always ensure view_mode and views are included for proper filtering
+        # We need these fields to filter out unsupported view types like 'map'
+        if fields is not None:
+            fields_list = list(fields)
+            
+            # Add view_mode and views if not already present
+            if 'view_mode' not in fields_list:
+                fields_list.append('view_mode')
+                fields_to_remove.append('view_mode')
+            if 'views' not in fields_list:
+                fields_list.append('views')
+                fields_to_remove.append('views')
+            
+            records = super().read(fields=fields_list)
+        else:
+            records = super().read(fields=fields)
+        
+        # Check which view types are available in the system
         available_view_types = {
             selection[0] for selection in self.env["ir.ui.view"]._fields["type"].selection
         }
+        
+        # Filter out unsupported view types (like 'map' if not installed)
         if "map" not in available_view_types:
             for action in records:
+                # Filter view_mode field (comma-separated string of view types)
                 view_mode = action.get("view_mode")
-                if view_mode:
-                    parts = [mode for mode in view_mode.split(",") if mode != "map"]
-                    if len(parts) != len(view_mode.split(",")):
-                        action["view_mode"] = ",".join(parts)
+                if view_mode and isinstance(view_mode, str):
+                    # Split, strip whitespace, filter out 'map' and empty strings
+                    # Using two-step approach for clarity and to avoid redundant strip() calls
+                    stripped_modes = [m.strip() for m in view_mode.split(",")]
+                    parts = [mode for mode in stripped_modes if mode and mode != "map"]
+                    action["view_mode"] = ",".join(parts)
+                
+                # Filter views field
+                # Views are tuples: (view_id, view_type) where view_id is int or False
+                # We use len check for defensive programming in case of data corruption
                 views = action.get("views")
-                if views:
-                    filtered_views = [view for view in views if view and view[1] != "map"]
-                    if len(filtered_views) != len(views):
-                        action["views"] = filtered_views
+                if views and isinstance(views, list):
+                    # Filter out any views with 'map' type
+                    filtered_views = [view for view in views 
+                                    if view and len(view) >= 2 and view[1] != "map"]
+                    action["views"] = filtered_views
+        
+        # Remove fields that were not originally requested to maintain API contract
+        if fields_to_remove:
+            for action in records:
+                for field in fields_to_remove:
+                    action.pop(field, None)
+        
         return records
