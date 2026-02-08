@@ -37,15 +37,16 @@ class IrActionsActWindow(models.Model):
                 # Filter view_mode field (comma-separated string of view types)
                 view_mode = action.get("view_mode")
                 if view_mode and isinstance(view_mode, str):
-                    parts = [mode.strip() for mode in view_mode.split(",") if mode.strip() != "map"]
+                    # Split, strip whitespace, and filter out 'map'
+                    parts = [mode for mode in (m.strip() for m in view_mode.split(",")) if mode != "map"]
                     action["view_mode"] = ",".join(parts)
                 
                 # Filter views field
-                # Each view is a tuple: (view_id, view_type) where view_id is int or False
+                # Views are tuples: (view_id, view_type) where view_id is int or False
                 views = action.get("views")
                 if views and isinstance(views, list):
                     # Filter out any views with 'map' type
-                    # The len check is defensive in case of malformed data
+                    # Check len >= 2 to ensure tuple has both view_id and view_type
                     filtered_views = [view for view in views if view and len(view) >= 2 and view[1] != "map"]
                     action["views"] = filtered_views
         
