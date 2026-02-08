@@ -38,16 +38,16 @@ class IrActionsActWindow(models.Model):
                 view_mode = action.get("view_mode")
                 if view_mode and isinstance(view_mode, str):
                     # Split, strip whitespace, filter out 'map' and empty strings
-                    parts = [mode for mode in (m.strip() for m in view_mode.split(",")) 
-                             if mode and mode != "map"]
+                    stripped_modes = [m.strip() for m in view_mode.split(",")]
+                    parts = [mode for mode in stripped_modes if mode and mode != "map"]
                     action["view_mode"] = ",".join(parts)
                 
                 # Filter views field
                 # Views are tuples: (view_id, view_type) where view_id is int or False
+                # We use len check for defensive programming in case of data corruption
                 views = action.get("views")
                 if views and isinstance(views, list):
                     # Filter out any views with 'map' type
-                    # The structure is guaranteed by Odoo, but we check len for safety
                     filtered_views = [view for view in views 
                                     if view and len(view) >= 2 and view[1] != "map"]
                     action["views"] = filtered_views
