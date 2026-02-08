@@ -1,6 +1,9 @@
 ## Summary / 摘要
 - 
 
+## Issue Link / 关联问题
+- Closes #<number>
+
 ## Risk / 风险
 - P0/P1/P2 + rationale / 风险等级与理由
 
