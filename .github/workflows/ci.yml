@@ -1,0 +1,72 @@
+name: CI
+
+on:
+  pull_request:
+    branches: [main]
+
+jobs:
+  validate-workflows:
+    name: Validate YAML/Workflows
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Install YAML parser
+        run: python -m pip install pyyaml
+
+      - name: Validate workflow YAML
+        run: |
+          python - <<'PY'
+          import glob
+          import sys
+          import yaml
+
+          paths = sorted(glob.glob('.github/workflows/*.yml') + glob.glob('.github/workflows/*.yaml'))
+          if not paths:
+              print('No workflow files found')
+              sys.exit(1)
+
+          for path in paths:
+              with open(path, 'r', encoding='utf-8') as f:
+                  yaml.safe_load(f)
+              print(f"OK: {path}")
+
+          print('Workflow YAML validation passed')
+          PY
+
+  python-validate:
+    name: Python Validate
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Compile Python files
+        run: |
+          TARGETS=()
+          if [ -d addons ]; then
+            TARGETS+=("addons")
+          fi
+
+          if [ ${#TARGETS[@]} -eq 0 ]; then
+            echo "No Python addon directories found; skipping compileall."
+            exit 0
+          fi
+
+          python -m compileall "${TARGETS[@]}"
+
+      - name: Unit tests (placeholder if none configured)
+        run: |
+          if [ -f pytest.ini ] || [ -f tox.ini ] || [ -f pyproject.toml ]; then
+            python -m pip install pytest
+            python -m pytest -q || exit 1
+          else
+            echo "No pytest/tox configuration found; unit tests not configured."
+          fi
