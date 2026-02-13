@@ -1,0 +1,58 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<odoo>
+    <data noupdate="1">
+        <!-- ============================================================
+             Seisei Feature Seed Data
+             Keys must match what seisei_entitlements stores on Odoo 18.
+             ============================================================ -->
+
+        <record id="feature_ocr" model="seisei.feature">
+            <field name="name">OCR Document Recognition</field>
+            <field name="key">module_ocr</field>
+            <field name="description">Invoice OCR and Bank Statement OCR — powered by LLM vision models.</field>
+            <field name="sequence">10</field>
+        </record>
+
+        <record id="feature_ocr_file" model="seisei.feature">
+            <field name="name">Sheet Forge (OCR Template Fill)</field>
+            <field name="key">module_ocr_file</field>
+            <field name="description">OCR source documents and fill Excel templates automatically.</field>
+            <field name="sequence">20</field>
+        </record>
+
+        <record id="feature_qr_ordering" model="seisei.feature">
+            <field name="name">QR Ordering</field>
+            <field name="key">module_qr_ordering</field>
+            <field name="description">QR code based table ordering for restaurants and cafes.</field>
+            <field name="sequence">30</field>
+        </record>
+
+        <record id="feature_finance" model="seisei.feature">
+            <field name="name">Accounting Pro</field>
+            <field name="key">module_finance</field>
+            <field name="description">Advanced financial reports — PDF/Excel export, BS, PL, TB.</field>
+            <field name="sequence">40</field>
+        </record>
+
+        <record id="feature_payroll" model="seisei.feature">
+            <field name="name">Payroll</field>
+            <field name="key">module_payroll</field>
+            <field name="description">Japanese payroll calculation with social insurance integration.</field>
+            <field name="sequence">50</field>
+        </record>
+
+        <record id="feature_print" model="seisei.feature">
+            <field name="name">Print Hub</field>
+            <field name="key">module_print</field>
+            <field name="description">Cloud print management — send jobs to Star/Epson printers.</field>
+            <field name="sequence">60</field>
+        </record>
+
+        <record id="feature_ai" model="seisei.feature">
+            <field name="name">AI Companion</field>
+            <field name="key">module_ai</field>
+            <field name="description">AI chat assistant powered by Dify — contextual help inside Odoo.</field>
+            <field name="sequence">70</field>
+        </record>
+    </data>
+</odoo>
