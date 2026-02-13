@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 {
     'name': 'Vendor Ops Core',
-    'version': '19.0.4.0.0',
+    'version': '19.0.5.0.0',
     'category': 'Operations',
     'summary': 'Core Vendor Operations module - Tenant & Intake Batch management with Entitlement Billing',
     'description': '''
@@ -36,6 +36,7 @@
         'data/intake_batch_sequence.xml',
         'data/vendor_ops_tenant_sequence.xml',
         'data/seisei_cron.xml',
+        'data/seisei_feature_data.xml',
         # Load intake batch views FIRST (defines action_vendor_ops_intake_batch)
         'views/vendor_ops_intake_batch_views.xml',
         # Load push log views BEFORE tenant views (tenant views reference push log action)
