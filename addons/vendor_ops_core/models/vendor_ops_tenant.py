@@ -6,6 +6,8 @@ from odoo.exceptions import UserError
 from datetime import datetime
 import json
 import logging
+import random
+import string
 import requests
 
 _logger = logging.getLogger(__name__)
@@ -18,7 +20,8 @@ class VendorOpsTenant(models.Model):
     _order = 'name'
 
     name = fields.Char(required=True, index=True, tracking=True)
-    code = fields.Char(required=False, readonly=True, copy=False, index=True, tracking=True)
+    code = fields.Char(required=False, copy=False, index=True, tracking=True,
+                       help='Tenant code (e.g., TEN-HDNC9IGR). Auto-generated if left empty.')
     partner_id = fields.Many2one('res.partner', string='Partner', tracking=True)
     active = fields.Boolean(default=True, tracking=True)
     plan = fields.Selection(
@@ -212,22 +215,29 @@ class VendorOpsTenant(models.Model):
 
     @api.constrains('subdomain')
     def _check_subdomain_not_empty(self):
-        """Ensure subdomain is never empty"""
+        """Ensure subdomain is never empty (unless direct-login tenant)"""
         for rec in self:
+            # Direct-login tenants (with business_base_url set manually) may skip subdomain
+            if rec.business_base_url:
+                continue
             if not rec.subdomain or (isinstance(rec.subdomain, str) and rec.subdomain.strip() == ''):
                 raise UserError('Subdomain must be generated (non-empty).')
 
     @api.constrains('domain_primary')
     def _check_domain_primary_not_empty(self):
-        """Ensure domain_primary is never empty"""
+        """Ensure domain_primary is never empty (unless direct-login tenant)"""
         for rec in self:
+            if rec.business_base_url:
+                continue
             if not rec.domain_primary or (isinstance(rec.domain_primary, str) and rec.domain_primary.strip() == ''):
                 raise UserError('Primary Domain must be generated (non-empty).')
 
     @api.constrains('customer_db_name')
     def _check_customer_db_name_not_empty(self):
-        """Ensure customer_db_name is never empty"""
+        """Ensure customer_db_name is never empty (unless direct-login tenant)"""
         for rec in self:
+            if rec.business_base_url:
+                continue
             if not rec.customer_db_name or (isinstance(rec.customer_db_name, str) and rec.customer_db_name.strip() == ''):
                 raise UserError('Customer DB Name must be generated (non-empty).')
 
@@ -256,13 +266,12 @@ class VendorOpsTenant(models.Model):
 
     @api.model
     def _extract_subdomain_from_code(self, code):
-        """Extract numeric subdomain from tenant_code (TEN-00000123 -> 00000123)"""
+        """Extract subdomain from tenant_code (TEN-00000123 -> 00000123, TEN-HDNC9IGR -> hdnc9igr)"""
         if not code or not code.startswith('TEN-'):
             return None
         try:
-            # Extract numeric part after TEN-
-            numeric_part = code.split('-', 1)[1]
-            return numeric_part
+            part = code.split('-', 1)[1]
+            return part.lower()
         except (IndexError, ValueError):
             return None
 
@@ -790,31 +799,51 @@ class VendorOpsTenant(models.Model):
     # ==========================================
     # CRUD Overrides
     # ==========================================
+    @api.model
+    def _generate_random_code(self):
+        """Generate a random tenant code: TEN- + 8 uppercase alphanumeric chars"""
+        chars = string.ascii_uppercase + string.digits
+        for _attempt in range(10):
+            code = 'TEN-' + ''.join(random.choices(chars, k=8))
+            # Check uniqueness
+            if not self.search_count([('code', '=', code)]):
+                return code
+        raise UserError('Failed to generate unique tenant code after 10 attempts.')
+
     @api.model_create_multi
     def create(self, vals_list):
-        """Override create to auto-generate code and related fields"""
+        """Override create to auto-generate code and related fields.
+
+        Supports two modes:
+        1. Manual code: if vals['code'] is provided (e.g., 'TEN-HDNC9IGR'), use it directly.
+        2. Auto-generate: if code is empty, generate TEN- + 8 random alphanumeric chars.
+        """
         for vals in vals_list:
             # Generate tenant_code if empty/None/False/'NEW'/whitespace
             code_value = vals.get('code', '')
             if not code_value or (isinstance(code_value, str) and code_value.strip() in ('', 'NEW', '/')):
-                # Force generate code
-                vals['code'] = self.env['ir.sequence'].next_by_code('vendor_ops.tenant')
-                if not vals['code'] or (isinstance(vals['code'], str) and vals['code'].strip() == ''):
-                    raise UserError('Failed to generate tenant code. Please check sequence configuration (vendor_ops.tenant).')
+                vals['code'] = self._generate_random_code()
+            else:
+                # Normalize manual code: ensure TEN- prefix
+                code = code_value.strip().upper()
+                if not code.startswith('TEN-'):
+                    code = f'TEN-{code}'
+                vals['code'] = code
 
             # Ensure code is not empty string
             if not vals['code'] or (isinstance(vals['code'], str) and vals['code'].strip() == ''):
-                raise UserError('Tenant code cannot be empty. Please check sequence configuration.')
+                raise UserError('Tenant code cannot be empty.')
 
-            # Generate subdomain, domain_primary, customer_db_name BEFORE super().create()
+            # Generate subdomain, domain_primary, customer_db_name
             generated_fields = self._generate_tenant_fields(vals['code'])
-            if not generated_fields:
-                raise UserError(f'Failed to generate tenant fields from code: {vals["code"]}')
-            vals.update(generated_fields)
+            if generated_fields:
+                # Only set fields that are not already provided
+                for key, value in generated_fields.items():
+                    vals.setdefault(key, value)
 
             # Auto-fill business_base_url from domain_primary if not provided
-            if not vals.get('business_base_url') and generated_fields.get('domain_primary'):
-                vals['business_base_url'] = f"https://{generated_fields['domain_primary']}"
+            if not vals.get('business_base_url') and vals.get('domain_primary'):
+                vals['business_base_url'] = f"https://{vals['domain_primary']}"
 
             # Set initial bridge sync status
             vals.setdefault('bridge_sync_status', 'pending')
