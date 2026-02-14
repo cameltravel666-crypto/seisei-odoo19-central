@@ -54,5 +54,35 @@
             <field name="description">AI chat assistant powered by Dify — contextual help inside Odoo.</field>
             <field name="sequence">70</field>
         </record>
+
+        <!-- LINE Integration Modules -->
+
+        <record id="feature_line_connect" model="seisei.feature">
+            <field name="name">LINE Connect</field>
+            <field name="key">module_line_connect</field>
+            <field name="description">LINE Official Account integration — webhook routing, LIFF framework, user binding.</field>
+            <field name="sequence">110</field>
+        </record>
+
+        <record id="feature_line_marketing" model="seisei.feature">
+            <field name="name">LINE Marketing</field>
+            <field name="key">module_line_marketing</field>
+            <field name="description">Segment delivery, marketing automation, coupon management, and campaign analytics.</field>
+            <field name="sequence">111</field>
+        </record>
+
+        <record id="feature_line_orders" model="seisei.feature">
+            <field name="name">LINE Orders</field>
+            <field name="key">module_line_orders</field>
+            <field name="description">LINE ordering, booking, Stripe payment, and status notifications.</field>
+            <field name="sequence">112</field>
+        </record>
+
+        <record id="feature_line_helpdesk" model="seisei.feature">
+            <field name="name">LINE Helpdesk</field>
+            <field name="key">module_line_helpdesk</field>
+            <field name="description">LINE ticket creation, helpdesk workflow, and satisfaction surveys.</field>
+            <field name="sequence">113</field>
+        </record>
     </data>
 </odoo>

@@ -68,6 +68,7 @@ class OcrWebhookController(http.Controller):
 
             tenant_code = params.get('tenant_code', '')
             ocr_pages = params.get('ocr_pages', 1)
+            year_month = params.get('year_month', '')
             document_id = params.get('document_id')
             document_model = params.get('document_model')
             document_name = params.get('document_name')
@@ -83,9 +84,14 @@ class OcrWebhookController(http.Controller):
                 env = request.env(cr=cr)
                 Tenant = env['vendor.ops.tenant'].sudo()
 
-                # Normalize tenant code: ten_mkqzyn00 -> MKQZYN00
+                # Normalize tenant code for flexible lookup:
+                #   ten_mkqzyn00 -> subdomain=MKQZYN00, code=TEN-MKQZYN00
+                #   TEN-HDNC9IGR -> code=TEN-HDNC9IGR
+                #   ten_hdnc9igr -> subdomain=HDNC9IGR, code=TEN-HDNC9IGR
                 subdomain = tenant_code
                 if tenant_code.startswith('ten_'):
+                    subdomain = tenant_code[4:].upper()
+                elif tenant_code.startswith('TEN-'):
                     subdomain = tenant_code[4:].upper()
 
                 # Search for tenant by subdomain or code
@@ -107,9 +113,18 @@ class OcrWebhookController(http.Controller):
                         status=404
                     )
 
-                # Calculate new counts
-                new_count = tenant.ocr_image_count + ocr_pages
+                # Calculate new counts (with month-reset support)
+                from datetime import datetime as dt
+                current_month = year_month or dt.now().strftime('%Y-%m')
                 free_quota = 30  # Default free quota
+
+                if tenant.ocr_year_month != current_month:
+                    # New month — reset counters
+                    new_count = ocr_pages
+                else:
+                    # Same month — increment
+                    new_count = tenant.ocr_image_count + ocr_pages
+
                 billable = max(0, new_count - free_quota)
                 total_cost = billable * 20  # 20 JPY per image
 
@@ -118,13 +133,14 @@ class OcrWebhookController(http.Controller):
                     'ocr_image_count': new_count,
                     'ocr_billable_count': billable,
                     'ocr_total_cost': total_cost,
+                    'ocr_year_month': current_month,
                     'ocr_last_sync': fields.Datetime.now(),
                 })
 
                 # Commit the transaction
                 cr.commit()
 
-                _logger.info(f'[OCR Webhook] Updated tenant {tenant.code}: count={new_count}, billable={billable}')
+                _logger.info(f'[OCR Webhook] Updated tenant {tenant.code}: month={current_month}, count={new_count}, billable={billable}')
 
                 return Response(
                     json.dumps({
@@ -136,6 +152,7 @@ class OcrWebhookController(http.Controller):
                                 'ocr_image_count': new_count,
                                 'ocr_billable_count': billable,
                                 'ocr_total_cost': total_cost,
+                                'ocr_year_month': current_month,
                             }
                         },
                         'id': data.get('id')
